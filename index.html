@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="dot"></span><div><h1>Daily Focus</h1><small id="dateLabel"></small></div></div>
+  <div class="dayNav">
+    <button id="prevDay" aria-label="Previous day">‹</button>
+    <button id="todayBtn">Today</button>
+    <button id="nextDay" aria-label="Next day">›</button>
+  </div>
+  <div class="prog"><b id="pct">0%</b><div class="bar"><i id="barFill"></i></div></div>
+</header>
+
+<main>
+  <section class="col">
+    <p class="quote" id="quote"></p>
+
+    <article class="card amber">
+      <div class="cardHead"><span class="tag">TASKS</span><span class="count" id="taskCount">0/0</span></div>
+      <form id="taskForm">
+        <input id="taskText" dir="auto" placeholder="أضف مهمة جديدة..." autocomplete="off" required>
+        <input id="taskTime" type="time" aria-label="Time (optional)">
+        <button class="primary">Add</button>
+      </form>
+      <ul id="taskList" class="list"></ul>
+      <div class="foot">
+        <button id="carry" class="ghost">Carry over unfinished from yesterday</button>
+        <button id="clearDone" class="ghost">Clear done</button>
+      </div>
+    </article>
+  </section>
+
+  <aside class="col">
+    <article class="card">
+      <div class="cardHead"><span class="tag">FOCUS TIMER</span><span class="count" id="sessions">0 sessions</span></div>
+      <div class="ringWrap">
+        <svg viewBox="0 0 120 120" class="ring">
+          <circle cx="60" cy="60" r="54" class="track"/>
+          <circle cx="60" cy="60" r="54" class="arc" id="arc"/>
+        </svg>
+        <div class="ringText"><b id="clock">30:00</b><small id="mode">Focus · 30 min</small></div>
+      </div>
+      <div class="ctrls">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+        <button id="skipBtn" class="ghost">Skip</button>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="cardHead"><span class="tag">PRAYERS</span><span class="count" id="nextPrayer"></span></div>
+      <ul id="prayerList" class="list prayers"></ul>
+    </article>
+  </aside>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
