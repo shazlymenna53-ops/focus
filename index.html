@@ -29,6 +29,7 @@
       <form id="taskForm">
         <input id="taskText" dir="auto" placeholder="أضف مهمة جديدة..." autocomplete="off" required>
         <input id="taskTime" type="time" aria-label="Time (optional)">
+        <select id="taskSubject" aria-label="Subject (optional)" hidden></select>
         <button class="primary">Add</button>
       </form>
       <ul id="taskList" class="list"></ul>
@@ -47,11 +48,22 @@
         <button class="primary">Add</button>
       </form>
     </article>
+
+    <article class="card">
+      <div class="cardHead"><span class="tag">SUBJECTS · THIS WEEK</span><span class="count" id="subCount"></span></div>
+      <ul id="subList" class="list"></ul>
+      <form id="subForm">
+        <input id="subName" dir="auto" placeholder="مادة جديدة..." autocomplete="off" required>
+        <input id="subExam" type="date" aria-label="Exam date (optional)" title="تاريخ الامتحان (اختياري)">
+        <button class="primary">Add</button>
+      </form>
+    </article>
   </section>
 
   <aside class="col">
     <article class="card">
       <div class="cardHead"><span class="tag">FOCUS TIMER</span><span class="count" id="sessions">0 sessions</span></div>
+      <select id="focusTask" class="focusSel" aria-label="Task for this session"></select>
       <div class="ringWrap">
         <svg viewBox="0 0 120 120" class="ring">
           <circle cx="60" cy="60" r="54" class="track"/>
@@ -76,7 +88,8 @@
 <dialog id="topicDlg">
   <form id="topicForm">
     <p>ذاكرت إيه في الجلسة دي؟</p>
-    <input id="topicText" dir="auto" placeholder="مثال: الدرس الثاني تاريخ" autocomplete="off" required>
+    <input id="topicText" dir="auto" placeholder="مثال: الدرس الثاني تاريخ (سيبه فاضي لو مش عايز مراجعة)" autocomplete="off">
+    <label class="doneRow" id="topicDoneRow" hidden><input type="checkbox" id="topicDone"> خلصت المهمة دي ✓</label>
     <div class="row">
       <button class="primary">Save</button>
       <button type="button" id="topicSkip" class="ghost">Skip</button>

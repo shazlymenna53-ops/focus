@@ -93,6 +93,7 @@ function render() {
     s.dir = 'auto';
     s.ondblclick = () => { const v = prompt('Edit task', t.text); if (v && v.trim()) { t.text = v.trim(); save(); render(); } };
     li.append(c, s);
+    if (subjects.length) li.append(subjectSelect(t.subject || '', v => { t.subject = v; save(); render(); }));
     if (t.time) li.append(Object.assign(document.createElement('span'), { className: 'time', textContent: t.time }));
     const x = Object.assign(document.createElement('button'), { className: 'del', textContent: '✕', ariaLabel: 'Delete task' });
     x.onclick = () => { d.tasks = d.tasks.filter(z => z.id !== t.id); save(); render(); };
@@ -122,7 +123,7 @@ function render() {
   $('taskCount').textContent = `${d.tasks.filter(t => t.done).length}/${d.tasks.length}`;
   if (pct === 100) $('quote').textContent = 'خلصت يومك كله. فخور بيك 🌿';
 
-  renderReviews();
+  renderReviews(); renderSubjects(); renderFocusSelect();
 }
 
 /* ===== Spaced reviews (1 / 3 / 7 days) ===== */
@@ -134,10 +135,10 @@ const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new D
 const addDays = (k, n) => { const x = parseKey(k); x.setDate(x.getDate() + n); return keyOf(x); };
 const daysBetween = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 864e5);
 
-function addTopic(text) {
+function addTopic(text, subject = '') {
   text = (text || '').trim(); if (!text) return;
   const today = keyOf(new Date());
-  reviews.push({ id: crypto.randomUUID(), topic: text, created: today, stage: 0, due: addDays(today, REV_STEPS[0]), done: false });
+  reviews.push({ id: crypto.randomUUID(), topic: text, created: today, stage: 0, due: addDays(today, REV_STEPS[0]), done: false, subject });
   saveRev(); renderReviews();
 }
 
@@ -181,26 +182,143 @@ function renderReviews() {
     no.onclick = () => answerReview(r, false);
     const x = Object.assign(document.createElement('button'), { className: 'del', textContent: '✕', ariaLabel: 'Delete topic' });
     x.onclick = () => { reviews = reviews.filter(z => z.id !== r.id); saveRev(); renderReviews(); };
-    li.append(s, tag, ok, no, x); list.append(li);
+    const sn = subName(r.subject);
+    if (sn) li.append(s, Object.assign(document.createElement('span'), { className: 'subtag', textContent: sn }));
+    else li.append(s);
+    li.append(tag, ok, no, x); list.append(li);
   });
 }
 
 $('reviewForm').onsubmit = e => { e.preventDefault(); addTopic($('reviewText').value); $('reviewText').value = ''; };
 
+
+/* ===== Subjects, exam countdown, weekly stats ===== */
+const SUB_KEY = 'dailyFocus.subjects.v1', LOG_KEY = 'dailyFocus.log.v1';
+let subjects = JSON.parse(localStorage.getItem(SUB_KEY) || '[]');    // { id, name, exam: 'YYYY-MM-DD' | '' }
+let sessionLog = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');  // { date, subject, task, min }
+const saveSubs = () => localStorage.setItem(SUB_KEY, JSON.stringify(subjects));
+const saveLog = () => localStorage.setItem(LOG_KEY, JSON.stringify(sessionLog));
+const subName = id => (subjects.find(s => s.id === id) || {}).name || '';
+
+function subjectSelect(value, onChange) {
+  const sel = document.createElement('select'); sel.className = 'subSel'; sel.setAttribute('aria-label', 'Subject');
+  sel.append(new Option('— مادة —', ''));
+  subjects.forEach(s => sel.append(new Option(s.name, s.id)));
+  sel.value = value; if (sel.value !== value) sel.value = '';
+  sel.classList.toggle('set', !!sel.value);
+  sel.onchange = () => onChange(sel.value);
+  return sel;
+}
+let subSig = '';
+function fillTaskSubjectOptions() {
+  const sel = $('taskSubject'), sig = subjects.map(s => s.id + s.name).join('|');
+  sel.hidden = !subjects.length;
+  if (sig === subSig) return;
+  subSig = sig;
+  const cur = sel.value;
+  sel.innerHTML = ''; sel.append(new Option('— مادة —', ''));
+  subjects.forEach(s => sel.append(new Option(s.name, s.id)));
+  sel.value = cur; if (sel.value !== cur) sel.value = '';
+}
+
+function renderSubjects() {
+  fillTaskSubjectOptions();
+  const list = $('subList'); list.innerHTML = '';
+  const today = keyOf(new Date()), from = addDays(today, -6);
+  const week = sessionLog.filter(l => l.date >= from && l.date <= today);
+  const sum = arr => arr.reduce((a, l) => a + l.min, 0);
+  const rows = [...subjects]
+    .sort((a, b) => ((a.exam || '9999') < (b.exam || '9999') ? -1 : 1))
+    .map(s => { const x = week.filter(l => l.subject === s.id); return { s, n: x.length, min: sum(x) }; });
+  const other = week.filter(l => !subjects.some(s => s.id === l.subject));
+  if (other.length) rows.push({ s: null, n: other.length, min: sum(other) });
+  $('subCount').textContent = week.length ? `${week.length} sessions · 7d` : '';
+  if (!rows.length) { list.innerHTML = '<li class="empty">ضيف موادك (مثلًا: تاريخ، برمجة) وتاريخ الامتحان لو معروف.</li>'; return; }
+  const max = Math.max(1, ...rows.map(r => r.n));
+  rows.forEach(({ s, n, min }) => {
+    const li = document.createElement('li'); li.className = 'item subrow';
+    const top = document.createElement('div'); top.className = 'subTop';
+    top.append(Object.assign(document.createElement('span'), { className: 'txt', textContent: s ? s.name : 'غير محدد', dir: 'auto' }));
+    if (s) {
+      if (s.exam) {
+        const days = daysBetween(today, s.exam);
+        top.append(Object.assign(document.createElement('span'), {
+          className: 'cd' + (days >= 0 && days <= 7 ? ' soon' : ''), title: s.exam,
+          textContent: days > 0 ? `باقي ${days} يوم` : days === 0 ? 'الامتحان النهاردة' : 'عدّى'
+        }));
+      }
+      const dt = Object.assign(document.createElement('input'), { type: 'date', value: s.exam || '', className: 'examIn', title: 'تاريخ الامتحان' });
+      dt.onchange = () => { s.exam = dt.value; saveSubs(); renderSubjects(); };
+      const x = Object.assign(document.createElement('button'), { className: 'del', textContent: '✕' });
+      x.setAttribute('aria-label', 'Delete subject');
+      x.onclick = () => {
+        if (!confirm(`مسح مادة "${s.name}"؟ الجلسات القديمة هتتحسب "غير محدد".`)) return;
+        subjects = subjects.filter(z => z.id !== s.id); saveSubs(); render();
+      };
+      top.append(dt, x);
+    }
+    const bottom = document.createElement('div'); bottom.className = 'subBot';
+    const bar = document.createElement('div'); bar.className = 'sbar';
+    const fill = document.createElement('i'); fill.style.width = (n / max * 100) + '%'; bar.append(fill);
+    bottom.append(bar, Object.assign(document.createElement('span'), { className: 'count', textContent: `${n} · ${min}m` }));
+    li.append(top, bottom); list.append(li);
+  });
+}
+$('subForm').onsubmit = e => {
+  e.preventDefault();
+  const name = $('subName').value.trim(); if (!name) return;
+  subjects.push({ id: crypto.randomUUID(), name, exam: $('subExam').value });
+  saveSubs(); $('subName').value = ''; $('subExam').value = ''; render();
+};
+
+/* Timer <-> task link */
+let focusTaskId = '', focusSig = '';
+function renderFocusSelect() {
+  const sel = $('focusTask');
+  const opts = day(new Date()).tasks.filter(t => !t.done)
+    .map(t => [t.id, (t.subject && subName(t.subject) ? subName(t.subject) + ' · ' : '') + t.text]);
+  if (!opts.some(o => o[0] === focusTaskId)) focusTaskId = '';
+  const sig = JSON.stringify(opts);
+  if (sig !== focusSig) {
+    focusSig = sig;
+    sel.innerHTML = ''; sel.append(new Option('— اشتغل على مهمة (اختياري) —', ''));
+    opts.forEach(([id, label]) => sel.append(new Option(label, id)));
+  }
+  sel.value = focusTaskId;
+}
+$('focusTask').onchange = e => { focusTaskId = e.target.value; };
+function logSession() {
+  const t = day(new Date()).tasks.find(x => x.id === focusTaskId);
+  sessionLog.push({ date: keyOf(new Date()), subject: t ? (t.subject || '') : '', task: t ? t.text : '', min: CONFIG.focusMin });
+  saveLog(); renderSubjects();
+}
+
 /* "What did you study?" prompt after each finished focus session */
+function currentTask() { return day(new Date()).tasks.find(x => x.id === focusTaskId); }
 function askTopic() {
   const dlg = $('topicDlg');
   if (!dlg.showModal || dlg.open) return;
+  const t = currentTask();
+  $('topicText').value = t ? t.text : '';
+  $('topicDone').checked = false;
+  $('topicDoneRow').hidden = !t;
+  dlg.dataset.task = t ? t.id : '';
   try { dlg.showModal(); $('topicText').focus(); } catch (_) {}
 }
-$('topicForm').onsubmit = e => { e.preventDefault(); addTopic($('topicText').value); $('topicText').value = ''; $('topicDlg').close(); };
+$('topicForm').onsubmit = e => {
+  e.preventDefault();
+  const dlg = $('topicDlg'), t = day(new Date()).tasks.find(x => x.id === dlg.dataset.task);
+  addTopic($('topicText').value, t ? (t.subject || '') : '');
+  if (t && $('topicDone').checked) { t.done = true; save(); if (focusTaskId === t.id) focusTaskId = ''; render(); }
+  $('topicText').value = ''; dlg.close();
+};
 $('topicSkip').onclick = () => { $('topicText').value = ''; $('topicDlg').close(); };
 
 /* ===== Task form & actions ===== */
 $('taskForm').onsubmit = e => {
   e.preventDefault();
   const text = $('taskText').value.trim(); if (!text) return;
-  day().tasks.push({ id: crypto.randomUUID(), text, done: false, time: $('taskTime').value });
+  day().tasks.push({ id: crypto.randomUUID(), text, done: false, time: $('taskTime').value, subject: $('taskSubject').value });
   $('taskText').value = ''; $('taskTime').value = ''; save(); render();
 };
 $('clearDone').onclick = () => { const d = day(); d.tasks = d.tasks.filter(t => !t.done); save(); render(); };
@@ -245,7 +363,7 @@ function nextPhase(auto) {
   remaining = len();
   if (auto) { endAt = Date.now() + remaining * 1000; beep(phase === 'break' ? 520 : 880, .5); }
   drawTimer();
-  if (wasFocus && auto) askTopic();
+  if (wasFocus && auto) { logSession(); askTopic(); }
 }
 function loop() {
   remaining = Math.max(0, (endAt - Date.now()) / 1000);
@@ -261,4 +379,8 @@ $('skipBtn').onclick = () => { nextPhase(false); if (tick) endAt = Date.now() + 
 
 /* ===== Init ===== */
 render(); drawTimer();
-setInterval(() => { if (keyOf(viewDate) === keyOf(new Date())) render(); }, 60000);
+setInterval(() => {
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('.list') && ['SELECT', 'INPUT'].includes(a.tagName)) return;
+  if (keyOf(viewDate) === keyOf(new Date())) render();
+}, 60000);
