@@ -37,6 +37,16 @@
         <button id="clearDone" class="ghost">Clear done</button>
       </div>
     </article>
+
+    <article class="card teal">
+      <div class="cardHead"><span class="tag">REVIEWS</span><span class="count" id="reviewCount"></span></div>
+      <p class="hint">قبل ما تدوس: اقفل المذكرة وحاول تفتكر الدرس الأول.</p>
+      <ul id="reviewList" class="list"></ul>
+      <form id="reviewForm">
+        <input id="reviewText" dir="auto" placeholder="درس ذاكرته (يتراجع بعد 1 / 3 / 7 أيام)" autocomplete="off" required>
+        <button class="primary">Add</button>
+      </form>
+    </article>
   </section>
 
   <aside class="col">
@@ -62,6 +72,18 @@
     </article>
   </aside>
 </main>
+
+<dialog id="topicDlg">
+  <form id="topicForm">
+    <p>ذاكرت إيه في الجلسة دي؟</p>
+    <input id="topicText" dir="auto" placeholder="مثال: الدرس الثاني تاريخ" autocomplete="off" required>
+    <div class="row">
+      <button class="primary">Save</button>
+      <button type="button" id="topicSkip" class="ghost">Skip</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="app.js"></script>
 </body>
 </html>

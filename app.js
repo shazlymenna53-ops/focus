@@ -121,7 +121,80 @@ function render() {
   $('pct').textContent = pct + '%'; $('barFill').style.width = pct + '%';
   $('taskCount').textContent = `${d.tasks.filter(t => t.done).length}/${d.tasks.length}`;
   if (pct === 100) $('quote').textContent = 'خلصت يومك كله. فخور بيك 🌿';
+
+  renderReviews();
 }
+
+/* ===== Spaced reviews (1 / 3 / 7 days) ===== */
+const REV_KEY = 'dailyFocus.reviews.v1';
+const REV_STEPS = [1, 3, 7];                       // days after studying
+let reviews = JSON.parse(localStorage.getItem(REV_KEY) || '[]');
+const saveRev = () => localStorage.setItem(REV_KEY, JSON.stringify(reviews));
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const x = parseKey(k); x.setDate(x.getDate() + n); return keyOf(x); };
+const daysBetween = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 864e5);
+
+function addTopic(text) {
+  text = (text || '').trim(); if (!text) return;
+  const today = keyOf(new Date());
+  reviews.push({ id: crypto.randomUUID(), topic: text, created: today, stage: 0, due: addDays(today, REV_STEPS[0]), done: false });
+  saveRev(); renderReviews();
+}
+
+// remembered: move to next stage (gaps 1 → +2 → +4 days from the real review day). forgot: come back tomorrow.
+function answerReview(r, remembered) {
+  const today = keyOf(new Date());
+  if (remembered) {
+    r.stage++;
+    if (r.stage >= REV_STEPS.length) r.done = true;
+    else r.due = addDays(today, REV_STEPS[r.stage] - REV_STEPS[r.stage - 1]);
+  } else {
+    r.due = addDays(today, 1);
+  }
+  saveRev(); renderReviews();
+  if (remembered) beep(660, .12);
+}
+
+function renderReviews() {
+  const list = $('reviewList'); list.innerHTML = '';
+  const today = keyOf(new Date());
+  const active = reviews.filter(r => !r.done);
+  const due = active.filter(r => r.due <= today).sort((a, b) => (a.due < b.due ? -1 : 1));
+  const later = active.length - due.length;
+  $('reviewCount').textContent = due.length ? `${due.length} due today` : (later ? `${later} upcoming` : '');
+  if (!due.length) {
+    list.innerHTML = `<li class="empty">${active.length ? 'مفيش مراجعات النهاردة 🌿' : 'سجّل أول درس ذاكرته وهيظهر لك هنا وقت مراجعته.'}</li>`;
+    return;
+  }
+  due.forEach(r => {
+    const late = daysBetween(r.due, today);
+    const li = document.createElement('li'); li.className = 'item rev';
+    const s = Object.assign(document.createElement('span'), { className: 'txt', textContent: r.topic });
+    s.dir = 'auto';
+    const tag = Object.assign(document.createElement('span'), {
+      className: 'time', textContent: `${REV_STEPS[r.stage]}d${late > 0 ? ` · +${late}` : ''}`,
+      title: late > 0 ? `متأخرة ${late} يوم` : 'مراجعة النهاردة'
+    });
+    const ok = Object.assign(document.createElement('button'), { className: 'rbtn ok', textContent: 'فاكره', title: 'فاكره كويس' });
+    ok.onclick = () => answerReview(r, true);
+    const no = Object.assign(document.createElement('button'), { className: 'rbtn', textContent: 'نسيته', title: 'هترجع بكرة' });
+    no.onclick = () => answerReview(r, false);
+    const x = Object.assign(document.createElement('button'), { className: 'del', textContent: '✕', ariaLabel: 'Delete topic' });
+    x.onclick = () => { reviews = reviews.filter(z => z.id !== r.id); saveRev(); renderReviews(); };
+    li.append(s, tag, ok, no, x); list.append(li);
+  });
+}
+
+$('reviewForm').onsubmit = e => { e.preventDefault(); addTopic($('reviewText').value); $('reviewText').value = ''; };
+
+/* "What did you study?" prompt after each finished focus session */
+function askTopic() {
+  const dlg = $('topicDlg');
+  if (!dlg.showModal || dlg.open) return;
+  try { dlg.showModal(); $('topicText').focus(); } catch (_) {}
+}
+$('topicForm').onsubmit = e => { e.preventDefault(); addTopic($('topicText').value); $('topicText').value = ''; $('topicDlg').close(); };
+$('topicSkip').onclick = () => { $('topicText').value = ''; $('topicDlg').close(); };
 
 /* ===== Task form & actions ===== */
 $('taskForm').onsubmit = e => {
@@ -166,11 +239,13 @@ function drawTimer() {
   document.title = tick ? `${pad(m)}:${pad(s)} · ${phase === 'focus' ? 'Focus' : 'Break'}` : 'Daily Focus';
 }
 function nextPhase(auto) {
-  if (phase === 'focus' && auto) sessions++;
-  phase = phase === 'focus' ? 'break' : 'focus';
+  const wasFocus = phase === 'focus';
+  if (wasFocus && auto) sessions++;
+  phase = wasFocus ? 'break' : 'focus';
   remaining = len();
   if (auto) { endAt = Date.now() + remaining * 1000; beep(phase === 'break' ? 520 : 880, .5); }
   drawTimer();
+  if (wasFocus && auto) askTopic();
 }
 function loop() {
   remaining = Math.max(0, (endAt - Date.now()) / 1000);
