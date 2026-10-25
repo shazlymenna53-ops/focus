@@ -122,3 +122,20 @@ input[type=date]{color-scheme:dark;font-family:var(--mono);font-size:.8rem}
 .doneRow{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--muted);font-size:.9rem;cursor:pointer}
 #topicForm .doneRow input{width:auto;padding:0;border:0;background:none;accent-color:var(--teal)}
 @media(max-width:820px){#taskForm{flex-wrap:wrap}#taskText{flex-basis:100%}.subTop{flex-wrap:wrap}}
+
+/* ===== Tablet / touch fixes ===== */
+/* single column: keep the timer right after the tasks instead of at the bottom */
+@media(max-width:820px){
+  .col{display:contents}
+  .quote{order:0}.c-tasks{order:1}.c-timer{order:2}.c-reviews{order:3}.c-subjects{order:4}.c-prayers{order:5}
+}
+/* no hover on touch screens: always show the delete buttons, and use bigger tap targets */
+@media(hover:none){.del{opacity:1}}
+@media(pointer:coarse){
+  .chk{width:24px;height:24px}
+  .del{padding:6px 10px}
+  .rbtn{padding:8px 12px}
+  .subSel{padding:7px 10px}
+  .examIn{padding:6px 8px}
+  .dayNav button,.ghost{padding:9px 14px}
+}

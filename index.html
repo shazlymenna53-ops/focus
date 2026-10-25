@@ -24,7 +24,7 @@
   <section class="col">
     <p class="quote" id="quote"></p>
 
-    <article class="card amber">
+    <article class="card amber c-tasks">
       <div class="cardHead"><span class="tag">TASKS</span><span class="count" id="taskCount">0/0</span></div>
       <form id="taskForm">
         <input id="taskText" dir="auto" placeholder="أضف مهمة جديدة..." autocomplete="off" required>
@@ -39,7 +39,7 @@
       </div>
     </article>
 
-    <article class="card teal">
+    <article class="card teal c-reviews">
       <div class="cardHead"><span class="tag">REVIEWS</span><span class="count" id="reviewCount"></span></div>
       <p class="hint">قبل ما تدوس: اقفل المذكرة وحاول تفتكر الدرس الأول.</p>
       <ul id="reviewList" class="list"></ul>
@@ -49,7 +49,7 @@
       </form>
     </article>
 
-    <article class="card">
+    <article class="card c-subjects">
       <div class="cardHead"><span class="tag">SUBJECTS · THIS WEEK</span><span class="count" id="subCount"></span></div>
       <ul id="subList" class="list"></ul>
       <form id="subForm">
@@ -61,7 +61,7 @@
   </section>
 
   <aside class="col">
-    <article class="card">
+    <article class="card c-timer">
       <div class="cardHead"><span class="tag">FOCUS TIMER</span><span class="count" id="sessions">0 sessions</span></div>
       <select id="focusTask" class="focusSel" aria-label="Task for this session"></select>
       <div class="ringWrap">
@@ -78,7 +78,7 @@
       </div>
     </article>
 
-    <article class="card">
+    <article class="card c-prayers">
       <div class="cardHead"><span class="tag">PRAYERS</span><span class="count" id="nextPrayer"></span></div>
       <ul id="prayerList" class="list prayers"></ul>
     </article>
